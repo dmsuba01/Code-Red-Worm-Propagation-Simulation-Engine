@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Red Worm Propagation Simulation Engine - 5-Scenario Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #0b1120;
+            --bg-secondary: #131d32;
+            --bg-card: #1e293b;
+            --bg-card-hover: #27354f;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            
+            --c-s1: #ef4444; /* Baseline Red */
+            --c-s2: #f59e0b; /* Congestion Amber */
+            --c-s3: #10b981; /* Countermeasures Emerald */
+            --c-s4: #0ea5e9; /* Two-Factor Sky */
+            --c-s5: #a855f7; /* Delayed Patching Purple */
+            --c-accent: #38bdf8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding: 20px 28px 40px;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--c-accent);
+            letter-spacing: -0.4px;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 3px;
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+        }
+
+        .badge.accent {
+            background: rgba(14, 165, 233, 0.2);
+            border-color: #0ea5e9;
+            color: #38bdf8;
+        }
+
+        .badge.team {
+            background: rgba(168, 85, 247, 0.2);
+            border-color: #a855f7;
+            color: #c084fc;
+        }
+
+        /* METRIC CARDS ROW */
+        .cards-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px 16px;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: #475569;
+            background: var(--bg-card-hover);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+
+        .card-s1::before { background: var(--c-s1); }
+        .card-s2::before { background: var(--c-s2); }
+        .card-s3::before { background: var(--c-s3); }
+        .card-s4::before { background: var(--c-s4); }
+        .card-s5::before { background: var(--c-s5); }
+
+        .metric-card.active-card {
+            border-color: var(--c-accent);
+            box-shadow: 0 0 0 1px var(--c-accent);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .card-tag {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .tag-s1 { color: var(--c-s1); }
+        .tag-s2 { color: var(--c-s2); }
+        .tag-s3 { color: var(--c-s3); }
+        .tag-s4 { color: var(--c-s4); }
+        .tag-s5 { color: var(--c-s5); }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 6px;
+        }
+
+        .card-stat-main {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .card-stat-sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .card-meta-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 11.5px;
+        }
+
+        .meta-item .label {
+            color: var(--text-muted);
+            display: block;
+            font-size: 10px;
+        }
+
+        .meta-item .val {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        /* MAIN CONTENT SECTION */
+        .dashboard-body {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        /* CONTROLS BAR */
+        .controls-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .tabs-group {
+            display: flex;
+            gap: 6px;
+            background: var(--bg-primary);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .tab-btn:hover { color: #ffffff; }
+
+        .tab-btn.active {
+            background: #0284c7;
+            color: #ffffff;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.15s ease;
+        }
+
+        .toggle-pill input {
+            accent-color: var(--c-accent);
+            cursor: pointer;
+        }
+
+        .toggle-pill.pill-s1 { border-color: rgba(239, 68, 68, 0.4); }
+        .toggle-pill.pill-s2 { border-color: rgba(245, 158, 11, 0.4); }
+        .toggle-pill.pill-s3 { border-color: rgba(16, 185, 129, 0.4); }
+        .toggle-pill.pill-s4 { border-color: rgba(14, 165, 233, 0.4); }
+        .toggle-pill.pill-s5 { border-color: rgba(168, 85, 247, 0.4); }
+
+        .indicator-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+        }
+
+        /* CHARTS CONTAINER */
+        .chart-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px 20px;
+            position: relative;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .chart-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-header p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .canvas-wrap {
+            position: relative;
+            width: 100%;
+            height: 380px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* SCRUBBER SLIDER */
+        .slider-wrap {
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--bg-primary);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider-wrap label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            font-weight: 600;
+        }
+
+        .slider-wrap input[type=range] {
+            flex: 1;
+            accent-color: var(--c-accent);
+            cursor: pointer;
+        }
+
+        .slider-readout {
+            font-size: 12px;
+            font-family: monospace;
+            background: #1e293b;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #475569;
+            color: var(--c-accent);
+        }
+
+        /* TAB PANELS */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* DELAYED PATCHING COMPARISON PANEL */
+        .delay-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 14px;
+        }
+
+        .delay-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px 16px;
+        }
+
+        .delay-card h4 {
+            font-size: 13.5px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .delay-card p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .delay-diff-callout {
+            background: rgba(168, 85, 247, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #e9d5ff;
+        }
+
+        /* HPC STATS TABLE */
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            text-align: left;
+        }
+
+        th {
+            background: #131d32;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* ROOFLINE SECTION */
+        .roofline-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 14px;
+        }
+
+        .roofline-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-size: 12px;
+        }
+
+        .roofline-box h4 {
+            font-size: 13px;
+            color: var(--c-accent);
+            margin-bottom: 8px;
+        }
+
+        .roofline-box ul {
+            padding-left: 18px;
+            color: var(--text-secondary);
+        }
+
+        .roofline-box li {
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 900px) {
+            .cards-row { grid-template-columns: 1fr 1fr; }
+            .delay-panel, .roofline-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .cards-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-title">
+            <h1>Code Red Worm Propagation Simulation Engine</h1>
+            <p>Predicting Saturation Rates and Delayed Patching Impact via Parallel Monte Carlo OpenMP Engine</p>
+        </div>
+        <div class="header-badges">
+            <span class="badge team">Team T05: Bhavashruthi M & D M Subashri</span>
+            <span class="badge accent">HPC Motif: Monte Carlo (Dwarf #4)</span>
+            <span class="badge">OpenMP Multi-Threading</span>
+            <span class="badge">Zou et al. (CCS 2002) Model</span>
+        </div>
+    </header>
+
+    <!-- METRIC CARDS ROW -->
+    <div class="cards-row">
+        <!-- Scenario 1 -->
+        <div class="metric-card card-s1" onclick="selectScenario('scenario1_baseline')">
+            <div class="card-top">
+                <span class="card-tag tag-s1">Scenario 1</span>
+                <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">Baseline</span>
+            </div>
+            <div class="card-title">Classical Simple Epidemic</div>
+            <div class="card-stat-main">
+                100.0% <span class="card-stat-sub">saturated</span>
+            </div>
+            <div class="card-stat-sub">360,000 / 360,000 servers infected</div>
+            <div class="card-meta-list">
+                <div class="meta-item"><span class="label">Peak Active</span><span class="val">360,000 hosts</span></div>
+                <div class="meta-item"><span class="label">Time to Peak</span><span class="val">t = 290</span></div>
+                <div class="meta-item"><span class="label">Congestion</span><span class="val">None (D0=10)</span></div>
+                <div class="meta-item"><span class="label">Countermeasures</span><span class="val">None (a=0)</span></div>
+            </div>
+        </div>
+
+        <!-- Scenario 2 -->
+        <div class="metric-card card-s2" onclick="selectScenario('scenario2_congestion')">
+            <div class="card-top">
+                <span class="card-tag tag-s2">Scenario 2</span>
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);">Congestion</span>
+            </div>
+            <div class="card-title">Congestion Slowdown</div>
+            <div class="card-stat-main">
+                100.0% <span class="card-stat-sub">delayed</span>
+            </div>
+            <div class="card-stat-sub">359,999 / 360,000 servers infected</div>
+            <div class="card-meta-list">
+                <div class="meta-item"><span class="label">Peak Active</span><span class="val">359,999 hosts</span></div>
+                <div class="meta-item"><span class="label">Time to Peak</span><span class="val">t = 1964</span></div>
+                <div class="meta-item"><span class="label">Slowdown</span><span class="val">6.8x slower</span></div>
+                <div class="meta-item"><span class="label">Countermeasures</span><span class="val">None (a=0)</span></div>
+            </div>
+        </div>
+
+        <!-- Scenario 3 -->
+        <div class="metric-card card-s3" onclick="selectScenario('scenario3_countermeasures')">
+            <div class="card-top">
+                <span class="card-tag tag-s3">Scenario 3</span>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">Defense</span>
+            </div>
+            <div class="card-title">Human Countermeasures</div>
+            <div class="card-stat-main">
+                96.3% <span class="card-stat-sub">capped</span>
+            </div>
+            <div class="card-stat-sub">346,834 / 360,000 servers infected</div>
+            <div class="card-meta-list">
+                <div class="meta-item"><span class="label">Peak Active</span><span class="val">219,512 hosts</span></div>
+                <div class="meta-item"><span class="label">Time to Peak</span><span class="val">t = 147</span></div>
+                <div class="meta-item"><span class="label">Final Active</span><span class="val">0 (eradicated)</span></div>
+                <div class="meta-item"><span class="label">Patch Start</span><span class="val">t = 0 (Immediate)</span></div>
+            </div>
+        </div>
+
+        <!-- Scenario 4 -->
+        <div class="metric-card card-s4" onclick="selectScenario('scenario4_both_factors')">
+            <div class="card-top">
+                <span class="card-tag tag-s4">Scenario 4</span>
+                <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border-color: rgba(14, 165, 233, 0.3);">Two-Factor</span>
+            </div>
+            <div class="card-title">Two-Factor Worm Model</div>
+            <div class="card-stat-main">
+                67.8% <span class="card-stat-sub">real match</span>
+            </div>
+            <div class="card-stat-sub">244,080 / 360,000 servers infected</div>
+            <div class="card-meta-list">
+                <div class="meta-item"><span class="label">Peak Active</span><span class="val">105,336 hosts</span></div>
+                <div class="meta-item"><span class="label">Time to Peak</span><span class="val">t = 155</span></div>
+                <div class="meta-item"><span class="label">Final Active</span><span class="val">0 (eradicated)</span></div>
+                <div class="meta-item"><span class="label">Both Factors</span><span class="val">Congestion + Disinfection</span></div>
+            </div>
+        </div>
+
+        <!-- Scenario 5 -->
+        <div class="metric-card card-s5 active-card" onclick="selectScenario('scenario5_delayed_patching')">
+            <div class="card-top">
+                <span class="card-tag tag-s5">Scenario 5</span>
+                <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7; border-color: rgba(168, 85, 247, 0.3);">Extension</span>
+            </div>
+            <div class="card-title">Delayed Patching Response</div>
+            <div class="card-stat-main">
+                88.4% <span class="card-stat-sub">delayed</span>
+            </div>
+            <div class="card-stat-sub">318,298 / 360,000 servers infected</div>
+            <div class="card-meta-list">
+                <div class="meta-item"><span class="label">Peak Active</span><span class="val">291,556 hosts</span></div>
+                <div class="meta-item"><span class="label">Time to Peak</span><span class="val">t = 249</span></div>
+                <div class="meta-item"><span class="label">Patch Delay</span><span class="val">T = 250 steps</span></div>
+                <div class="meta-item"><span class="label">Cost of Delay</span><span class="val">+74,218 infections</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROLS BAR -->
+    <div class="controls-bar">
+        <div class="tabs-group">
+            <button class="tab-btn active" onclick="switchTab('tab-comparison')">Multi-Scenario S-Curves</button>
+            <button class="tab-btn" onclick="switchTab('tab-active')">Active Infectious Waves (I)</button>
+            <button class="tab-btn" onclick="switchTab('tab-delay')">Delayed Patching Impact</button>
+            <button class="tab-btn" onclick="switchTab('tab-hpc')">HPC & OpenMP Scaling</button>
+        </div>
+
+        <!-- Zoom View Toggle -->
+        <div class="tabs-group">
+            <button class="tab-btn" id="btn-zoom-600" onclick="setZoom(600)">Paper View (t = 600)</button>
+            <button class="tab-btn active" id="btn-zoom-2000" onclick="setZoom(2000)">Full Timeline (t = 2000)</button>
+        </div>
+
+        <div class="toggle-group">
+            <label class="toggle-pill pill-s1">
+                <input type="checkbox" id="chk-s1" checked onchange="renderCharts()">
+                <span class="indicator-dot" style="background: var(--c-s1)"></span>
+                <span>S1: Baseline</span>
+            </label>
+            <label class="toggle-pill pill-s2">
+                <input type="checkbox" id="chk-s2" checked onchange="renderCharts()">
+                <span class="indicator-dot" style="background: var(--c-s2)"></span>
+                <span>S2: Congestion</span>
+            </label>
+            <label class="toggle-pill pill-s3">
+                <input type="checkbox" id="chk-s3" checked onchange="renderCharts()">
+                <span class="indicator-dot" style="background: var(--c-s3)"></span>
+                <span>S3: Countermeasures</span>
+            </label>
+            <label class="toggle-pill pill-s4">
+                <input type="checkbox" id="chk-s4" checked onchange="renderCharts()">
+                <span class="indicator-dot" style="background: var(--c-s4)"></span>
+                <span>S4: Two-Factor</span>
+            </label>
+            <label class="toggle-pill pill-s5">
+                <input type="checkbox" id="chk-s5" checked onchange="renderCharts()">
+                <span class="indicator-dot" style="background: var(--c-s5)"></span>
+                <span>S5: Delayed Patch</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- MAIN BODY -->
+    <div class="dashboard-body" style="margin-top: 16px;">
+
+        <!-- TAB 1: S-CURVES COMPARISON -->
+        <div id="tab-comparison" class="tab-content active">
+            <div class="chart-box">
+                <div class="chart-header">
+                    <div>
+                        <h3>Cumulative Infected Population J(t) Across All 5 Scenarios</h3>
+                        <p>Visualizes infection acceleration, router congestion slowdown, and immunization saturation ceilings</p>
+                    </div>
+                </div>
+                <div class="canvas-wrap">
+                    <canvas id="canvasComparison"></canvas>
+                </div>
+                <div class="slider-wrap">
+                    <label for="timeSlider">Time Inspector (t):</label>
+                    <input type="range" id="timeSlider" min="0" max="1999" value="300" oninput="updateTimeScrubber(this.value)">
+                    <span class="slider-readout" id="sliderReadout">t = 300</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: ACTIVE INFECTIOUS WAVES -->
+        <div id="tab-active" class="tab-content">
+            <div class="chart-box">
+                <div class="chart-header">
+                    <div>
+                        <h3>Active Infectious Population I(t) Dynamics</h3>
+                        <p>Shows how network congestion flattens the peak and human countermeasures trigger eradication</p>
+                    </div>
+                </div>
+                <div class="canvas-wrap">
+                    <canvas id="canvasActive"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: DELAYED PATCHING ANALYSIS -->
+        <div id="tab-delay" class="tab-content">
+            <div class="chart-box">
+                <div class="chart-header">
+                    <div>
+                        <h3>Delayed Patching Response Analysis: Scenario 4 vs Scenario 5</h3>
+                        <p>Quantifying how response latency alters outbreak inflection and peak compromise</p>
+                    </div>
+                </div>
+                <div class="canvas-wrap" style="height: 320px;">
+                    <canvas id="canvasDelay"></canvas>
+                </div>
+
+                <div class="delay-panel">
+                    <div class="delay-card">
+                        <h4 style="color: var(--c-s4);">Scenario 4: Prompt Countermeasures (T = 0)</h4>
+                        <p>Human countermeasures (disinfection, patching, and edge router filtering) begin immediately as soon as the first scans are observed.</p>
+                        <p><strong>Result:</strong> Susceptible hosts are pre-immunized while active infections are continuously cleaned, capping maximum saturation at <strong>67.8%</strong> and shifting peak active infections to <strong>t = 155</strong>.</p>
+                    </div>
+                    <div class="delay-card">
+                        <h4 style="color: var(--c-s5);">Scenario 5: Delayed Patching Response (T = 250)</h4>
+                        <p>Admins do not respond during the first 250 time steps while signatures are analyzed. No patching or filtering occurs until <strong>t = 250</strong>.</p>
+                        <p><strong>Result:</strong> During the initial delay window, the worm propagates unchecked. Total compromised hosts surge to <strong>318,298 (88.4%)</strong> with active peak infections reaching <strong>291,556 hosts</strong>.</p>
+                        <div class="delay-diff-callout">
+                            <strong>Key Cybersecurity Finding:</strong> Delaying patching by 250 steps allows the worm to breach the 50% inflection point, causing an additional <strong>+74,218 servers</strong> to be compromised worldwide (+20.6% higher saturation).
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: HPC & OPENMP SCALING -->
+        <div id="tab-hpc" class="tab-content">
+            <div class="chart-box">
+                <div class="chart-header">
+                    <div>
+                        <h3>High Performance Computing & OpenMP Multi-Threading Architecture</h3>
+                        <p>Parallel Monte Carlo scaling (Berkeley Dwarf #4) and Roofline Model computational bottleneck diagnosis</p>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Scenario Name</th>
+                                <th>Peak Infectious (I_max)</th>
+                                <th>Peak Time (t)</th>
+                                <th>Final Cumulative (J)</th>
+                                <th>Saturation (%)</th>
+                                <th>Removed / Patched (R)</th>
+                                <th>OpenMP Wall Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="color: var(--c-s1); font-weight: 600;">Scenario 1: Baseline Epidemic</td>
+                                <td>360,000</td>
+                                <td>t = 439</td>
+                                <td>360,000</td>
+                                <td>100.0%</td>
+                                <td>0</td>
+                                <td>0.045 s</td>
+                            </tr>
+                            <tr>
+                                <td style="color: var(--c-s2); font-weight: 600;">Scenario 2: Congestion Slowdown</td>
+                                <td>359,999</td>
+                                <td>t = 2000</td>
+                                <td>359,999</td>
+                                <td>100.0%</td>
+                                <td>0</td>
+                                <td>0.052 s</td>
+                            </tr>
+                            <tr>
+                                <td style="color: var(--c-s3); font-weight: 600;">Scenario 3: Countermeasures Only</td>
+                                <td>219,512</td>
+                                <td>t = 147</td>
+                                <td>346,834</td>
+                                <td>96.3%</td>
+                                <td>360,000</td>
+                                <td>0.048 s</td>
+                            </tr>
+                            <tr>
+                                <td style="color: var(--c-s4); font-weight: 600;">Scenario 4: Two-Factor Model</td>
+                                <td>105,336</td>
+                                <td>t = 155</td>
+                                <td>244,080</td>
+                                <td>67.8%</td>
+                                <td>357,762</td>
+                                <td>0.051 s</td>
+                            </tr>
+                            <tr>
+                                <td style="color: var(--c-s5); font-weight: 600;">Scenario 5: Delayed Patching</td>
+                                <td>291,556</td>
+                                <td>t = 249</td>
+                                <td>318,298</td>
+                                <td>88.4%</td>
+                                <td>359,643</td>
+                                <td>0.050 s</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="roofline-grid">
+                    <div class="roofline-box">
+                        <h4>OpenMP Parallelization Strategy</h4>
+                        <ul>
+                            <li><strong>Monte Carlo Domain Decomposition:</strong> 100 independent trials distributed via <code>#pragma omp parallel for schedule(dynamic)</code>.</li>
+                            <li><strong>Lock-Free Thread RNG:</strong> Each OpenMP thread uses an independent 64-bit SplitMix64 pseudo-random generator state, completely eliminating atomic lock contention.</li>
+                            <li><strong>Dynamic Scheduling:</strong> Handles load imbalance between runs that terminate early due to rapid eradication vs full 2000-step runs.</li>
+                        </ul>
+                    </div>
+                    <div class="roofline-box">
+                        <h4>Roofline Model Diagnosis: Memory-Bound</h4>
+                        <ul>
+                            <li><strong>Peak Hardware Compute:</strong> 780.0 GFLOP/s (14-Core CPU)</li>
+                            <li><strong>Peak DRAM Bandwidth:</strong> 76.8 GB/s &rarr; <strong>Ridge Point:</strong> 10.16 FLOPs/Byte</li>
+                            <li><strong>Simulation Operational Intensity:</strong> 1.82 FLOPs/Byte</li>
+                            <li><strong>Finding:</strong> 1.82 &lt;&lt; 10.16 &rarr; <strong>Strictly Memory-Bandwidth & Cache Bound</strong>. Host state updates dominate over arithmetic.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EMBEDDED DATA & SCRIPT ENGINE -->
+    <script src="dashboard.js"></script>
+</body>
+</html>

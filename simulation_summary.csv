@@ -1,0 +1,6 @@
+scenario,mean_peak_infectious,mean_peak_time,mean_final_infected,saturation_percent,mean_final_removed,wall_time_sec
+"Scenario 1: Baseline Epidemic",360000,439,360000,100.0,0,0.045
+"Scenario 2: Congestion Slowdown",359999,2000,359999,100.0,0,0.052
+"Scenario 3: Human Countermeasures",219512,147,346834,96.3,360000,0.048
+"Scenario 4: Two-Factor Model",105336,155,244080,67.8,357762,0.051
+"Scenario 5: Delayed Patching Response",291556,249,318298,88.4,359643,0.050
